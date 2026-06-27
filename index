@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>豆誌 Bean Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+/* ─── Reset & Vars ─── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0a04;--bg2:#1c1208;--bg3:#251a0c;
+  --text:#f0e8d8;--text2:#a89070;--text3:#6b5540;
+  --accent:#c8834a;--accent2:#e8a060;
+  --green:#4a9e7a;--red:#c85050;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --roast-l:#e8c87a;--roast-m:#c87840;--roast-d:#c08060;
+  --r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:22px;
+  --font:'Noto Sans TC',-apple-system,sans-serif;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+
+/* ─── Layout ─── */
+#app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+#page{flex:1;overflow-y:auto;padding-bottom:80px}
+
+/* ─── Bottom Nav ─── */
+#nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--bg2);border-top:1px solid var(--border2);display:flex;padding:10px 0 20px;z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text2);font-family:var(--font);padding:4px 0;transition:color .15s}
+.nav-btn.active{color:var(--accent)}
+.nav-btn svg{width:22px;height:22px}
+.nav-btn span{font-size:11px;font-weight:500}
+
+/* ─── Header ─── */
+.page-header{display:flex;align-items:center;justify-content:space-between;padding:20px 16px 12px;position:sticky;top:0;background:var(--bg);z-index:50;border-bottom:1px solid var(--border)}
+.page-title{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.page-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.header-actions{display:flex;align-items:center;gap:6px}
+
+/* ─── Buttons ─── */
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);padding:8px 14px;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s}
+.btn-primary:hover{background:var(--accent2)}
+.btn-primary:active{transform:scale(.97)}
+.btn-icon{width:34px;height:34px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.btn-icon:hover{border-color:var(--border2);color:var(--text)}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--text2);border-radius:var(--r-sm);padding:7px 12px;font-size:12px;font-family:var(--font);cursor:pointer;transition:all .15s}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+
+/* ─── Search & Filter ─── */
+.search-filter-wrap{padding:10px 16px 0;background:var(--bg);position:sticky;top:65px;z-index:40;border-bottom:1px solid rgba(255,255,255,0.04)}
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:30px;padding:9px 14px;margin-bottom:10px;transition:border-color .2s}
+.search-bar:focus-within{border-color:var(--accent)}
+.search-bar input{background:none;border:none;outline:none;color:var(--text);font-size:13px;font-family:var(--font);width:100%}
+.search-bar input::placeholder{color:var(--text3)}
+.search-bar svg{color:var(--text3);flex-shrink:0;width:16px;height:16px}
+.filter-row{display:flex;gap:7px;padding-bottom:10px}
+.filter-btn{flex:1;padding:6px 4px;border-radius:30px;border:1px solid var(--border2);background:transparent;font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;text-align:center;transition:all .15s;color:var(--text2)}
+.filter-btn.fl{background:rgba(232,200,122,.13);border-color:rgba(232,200,122,.35);color:var(--roast-l)}
+.filter-btn.fm{background:rgba(200,120,64,.13);border-color:rgba(200,120,64,.35);color:var(--roast-m)}
+.filter-btn.fd{background:rgba(180,100,50,.18);border-color:rgba(180,100,50,.35);color:var(--roast-d)}
+
+/* ─── Bean Cards ─── */
+.cards-wrap{padding:10px 16px}
+.bean-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;margin-bottom:10px;position:relative;transition:border-color .2s}
+.bean-card:hover{border-color:var(--border2)}
+.card-top{display:flex;gap:12px;margin-bottom:10px}
+.bean-img{width:58px;height:72px;border-radius:var(--r-sm);background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden}
+.bean-img img{width:100%;height:100%;object-fit:contain}
+.bean-info{flex:1;min-width:0;padding-right:52px}
+.bean-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bean-origin{font-size:11px;color:var(--text2);margin-bottom:7px}
+.badges{display:flex;gap:5px;flex-wrap:wrap}
+.rb{font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px;font-family:var(--font)}
+.rl{background:rgba(232,200,122,.13);color:var(--roast-l)}
+.rm{background:rgba(200,120,64,.13);color:var(--roast-m)}
+.rd{background:rgba(180,100,50,.18);color:var(--roast-d)}
+.pb{font-size:10px;padding:2px 9px;border-radius:20px;background:rgba(200,131,74,.13);color:var(--accent2)}
+.flavor-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.ftag{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(74,158,122,.14);color:var(--green)}
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--border)}
+.stars{color:var(--accent);font-size:12px;letter-spacing:1px}
+.grind-info{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px}
+.card-actions{position:absolute;top:12px;right:12px;display:flex;gap:4px}
+.cact{width:28px;height:28px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:12px}
+.cact:hover{color:var(--text);border-color:var(--border2)}
+.cact.del:hover{color:var(--red);border-color:var(--red)}
+
+/* ─── Empty ─── */
+.empty-state{text-align:center;padding:64px 24px;color:var(--text3)}
+.empty-icon{font-size:48px;margin-bottom:14px;opacity:.4;display:block}
+.empty-title{font-size:15px;color:var(--text2);font-weight:500;margin-bottom:8px}
+.empty-desc{font-size:12px;line-height:1.8}
+
+/* ─── Modal ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+.modal-sheet{background:var(--bg2);border-radius:var(--r-xl) var(--r-xl) 0 0;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;padding-bottom:32px}
+.modal-sheet::-webkit-scrollbar{width:3px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);z-index:10}
+.modal-title{font-size:16px;font-weight:600}
+.form-sec{padding:0 20px;margin-bottom:16px}
+.form-label{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;display:block}
+.form-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 13px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text3)}
+.seg-ctrl{display:flex;gap:5px}
+.seg-btn{flex:1;padding:8px 4px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;text-align:center;transition:all .15s}
+.seg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.rating-wrap{display:flex;gap:6px;align-items:center}
+.star-btn{font-size:26px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.15);transition:color .1s;line-height:1}
+.star-btn.active{color:var(--accent)}
+.camera-box{margin:14px 20px 16px;border:1.5px dashed var(--border2);border-radius:var(--r-md);padding:20px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .2s}
+.camera-box:hover{border-color:var(--accent)}
+.camera-box input[type=file]{display:none}
+.camera-icon{font-size:32px;margin-bottom:6px}
+.camera-lbl{font-size:13px;color:var(--text2)}
+.camera-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.ai-result{margin:0 20px 16px;background:rgba(74,158,122,.1);border:1px solid rgba(74,158,122,.25);border-radius:var(--r-sm);padding:10px 13px}
+.ai-result-title{font-size:11px;font-weight:600;color:var(--green);margin-bottom:4px}
+.ai-result-text{font-size:11px;color:var(--text2);line-height:1.6}
+.ai-loading{display:flex;align-items:center;gap:8px;color:var(--text2);font-size:12px;padding:10px 0}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.save-btn{margin:8px 20px 0;width:calc(100% - 40px);background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);padding:13px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;transition:background .15s}
+.save-btn:hover{background:var(--accent2)}
+.save-btn:active{transform:scale(.98)}
+.img-preview{width:100%;max-height:180px;object-fit:contain;background:var(--bg3);border-radius:var(--r-sm)}
+.clear-img-btn{font-size:11px;color:var(--accent2);background:none;border:none;cursor:pointer;font-family:var(--font);margin-top:4px}
+
+/* ─── Analysis ─── */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-md);padding:14px 8px;text-align:center}
+.stat-val{font-size:24px;font-weight:700;color:var(--accent)}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:3px}
+.section-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;margin-bottom:12px}
+.section-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.rbar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.rbar-label{font-size:11px;width:30px;flex-shrink:0}
+.rbar-wrap{flex:1;background:var(--bg3);border-radius:4px;height:7px;overflow:hidden}
+.rbar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.rbar-n{font-size:11px;color:var(--text3);width:18px;text-align:right}
+.map-canvas{width:100%;height:160px;border-radius:var(--r-md);background:var(--bg3);cursor:pointer;display:block}
+.region-box{background:var(--bg2);border:1px solid rgba(74,158,122,.2);border-radius:var(--r-md);padding:12px;margin-bottom:12px;transition:all .3s}
+.region-title{font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.clear-filter{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;font-family:var(--font);text-decoration:underline;margin-left:auto}
+.ai-insight{background:rgba(200,131,74,.08);border:1px solid rgba(200,131,74,.2);border-radius:var(--r-lg);padding:14px;margin-bottom:12px}
+.ai-insight-header{font-size:12px;font-weight:600;color:var(--accent2);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.ai-insight-text{font-size:12px;color:var(--text2);line-height:1.8}
+
+/* ─── Login ─── */
+#login-page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;background:var(--bg)}
+.login-logo{font-size:60px;margin-bottom:16px}
+.login-title{font-size:28px;font-weight:700;margin-bottom:6px}
+.login-sub{font-size:14px;color:var(--text3);margin-bottom:48px}
+.login-form{width:100%;max-width:320px}
+.login-label{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:8px}
+.login-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:14px 16px;color:var(--text);font-size:16px;font-family:var(--font);letter-spacing:3px;text-align:center;outline:none;transition:border-color .2s;margin-bottom:20px}
+.login-input:focus{border-color:var(--accent)}
+.login-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--r-md);padding:14px;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;transition:background .15s}
+.login-btn:hover{background:var(--accent2)}
+.login-hint{font-size:12px;color:var(--text3);text-align:center;margin-top:16px;line-height:1.7}
+
+/* ─── Toast ─── */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 18px;border-radius:30px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;white-space:nowrap;max-width:90vw}
+.toast.show{opacity:1}
+
+/* ─── Confirm Dialog ─── */
+.confirm-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-lg);padding:20px;width:280px;text-align:center}
+.confirm-title{font-size:15px;font-weight:600;margin-bottom:8px}
+.confirm-desc{font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6}
+.confirm-actions{display:flex;gap:8px}
+.confirm-actions button{flex:1;padding:10px;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;border:none}
+.confirm-cancel{background:var(--bg3);color:var(--text2)}
+.confirm-ok{background:var(--red);color:#fff}
+</style>
+</head>
+<body>
+
+<!-- Login Page -->
+<div id="login-page">
+  <div class="login-logo">☕</div>
+  <h1 class="login-title">豆誌</h1>
+  <p class="login-sub">你的私人咖啡豆記錄本</p>
+  <div class="login-form">
+    <label class="login-label" for="code-input">輸入識別碼</label>
+    <input id="code-input" class="login-input" type="text" placeholder="例如：JASON01" maxlength="20" autocomplete="off" />
+    <button class="login-btn" onclick="doLogin()">進入我的豆誌</button>
+    <p class="login-hint">識別碼即為你的個人帳戶<br>首次使用會自動建立，請記住你的識別碼</p>
+  </div>
+</div>
+
+<!-- App Shell (hidden until login) -->
+<div id="app" style="display:none">
+  <div id="page"></div>
+  <nav id="nav">
+    <button class="nav-btn active" onclick="showPage('collection')" id="nav-collection">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>收藏</span>
+    </button>
+    <button class="nav-btn" onclick="showPage('analysis')" id="nav-analysis">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>分析</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container"></div>
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let userCode = localStorage.getItem('bj_code') || null;
+let beans = JSON.parse(localStorage.getItem('bj_beans_' + userCode) || '[]');
+let currentPage = 'collection';
+let activeRoastFilters = new Set();
+let selectedRegion = null;
+let editingId = null;
+let aiInsightText = '';
+
+// ── Helpers ──
+function saveData() {
+  localStorage.setItem('bj_beans_' + userCode, JSON.stringify(beans));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function stars(n, total=5) {
+  return Array.from({length:total}, (_,i) => i < n ? '★' : '☆').join('');
+}
+
+function roastClass(r) {
+  return r === '淺焙' ? 'rl' : r === '中焙' ? 'rm' : 'rd';
+}
+
+function escHTML(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+// ── Login ──
+function doLogin() {
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  if (!code || code.length < 3) { showToast('請輸入至少 3 個字元的識別碼'); return; }
+  userCode = code;
+  localStorage.setItem('bj_code', code);
+  beans = JSON.parse(localStorage.getItem('bj_beans_' + code) || '[]');
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  showPage('collection');
+}
+
+document.getElementById('code-input').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+if (userCode) {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  setTimeout(() => showPage('collection'), 0);
+}
+
+// ── Navigation ──
+function showPage(p) {
+  currentPage = p;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-' + p).classList.add('active');
+  if (p === 'collection') renderCollection();
+  else renderAnalysis();
+}
+
+// ═══════════════════════════════════
+// ── COLLECTION PAGE ──
+// ═══════════════════════════════════
+function renderCollection() {
+  const visibleBeans = getFilteredBeans();
+  const total = beans.length;
+  const subtitle = activeRoastFilters.size === 0
+    ? `${total} 支咖啡豆收藏中`
+    : `顯示 ${visibleBeans.length} / ${total} 支`;
+
+  document.getElementById('page').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">☕ 我的豆誌</div>
+        <div class="page-sub" id="count-sub">${subtitle}</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" onclick="doLogout()" title="登出">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+        <button class="btn-primary" onclick="openAddModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新增
+        </button>
+      </div>
+    </div>
+
+    <div class="search-filter-wrap">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="search-input" placeholder="搜尋產區、莊園、風味、處理法…" oninput="renderCards()" />
+      </div>
+      <div class="filter-row">
+        <button class="filter-btn${activeRoastFilters.has('淺焙')?' fl':''}" id="fbtn-light" onclick="toggleRoastFilter('淺焙')">☀ 淺焙</button>
+        <button class="filter-btn${activeRoastFilters.has('中焙')?' fm':''}" id="fbtn-medium" onclick="toggleRoastFilter('中焙')">🌤 中焙</button>
+        <button class="filter-btn${activeRoastFilters.has('深焙')?' fd':''}" id="fbtn-dark" onclick="toggleRoastFilter('深焙')">🌑 深焙</button>
+      </div>
+    </div>
+
+    <div class="cards-wrap" id="cards-container"></div>
+  `;
+  renderCards();
+}
+
+function getFilteredBeans() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  return beans.filter(b => {
+    const roastOk = activeRoastFilters.size === 0 || activeRoastFilters.has(b.roast);
+    const textOk = !q || [b.name, b.origin, b.farm, b.roast, b.process, ...(b.flavors||[])].join(' ').toLowerCase().includes(q);
+    return roastOk && textOk;
+  });
+}
+
+function renderCards() {
+  const filtered = getFilteredBeans();
+  const total = beans.length;
+  const sub = activeRoastFilters.size === 0 && !(document.getElementById('search-input')?.value)
+    ? `${total} 支咖啡豆收藏中`
+    : `顯示 ${filtered.length} / ${total} 支`;
+  const sub2 = document.getElementById('count-sub');
+  if (sub2) sub2.textContent = sub;
+
+  const container = document.getElementById('cards-container');
+  if (!container) return;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-icon">${beans.length===0?'🫘':'🔍'}</span><div class="empty-title">${beans.length===0?'還沒有收藏':'沒有符合的咖啡豆'}</div><div class="empty-desc">${beans.length===0?'按右上角「新增」，開始記錄你的咖啡豆！':'試試其他關鍵字，或取消篩選'}</div></div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(b => `
+    <div class="bean-card">
+      <div class="card-actions">
+        <div class="cact" onclick="openEditModal('${b.id}')" title="編輯">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <div class="cact del" onclick="confirmDelete('${b.id}', '${escHTML(b.name)}')" title="刪除">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        </div>
+      </div>
+      <div class="card-top">
+        <div class="bean-img">${b.imageUrl ? `<img src="${escHTML(b.imageUrl)}" alt="${escHTML(b.name)}" />` : '☕'}</div>
+        <div class="bean-info">
+          <div class="bean-name">${escHTML(b.name||'未命名')}</div>
+          <div class="bean-origin">${escHTML([b.origin,b.farm].filter(Boolean).join(' · ')||'產區未填寫')}</div>
+          <div class="badges">
+            ${b.roast ? `<span class="rb ${roastClass(b.roast)}">${escHTML(b.roast)}</span>` : ''}
+            ${b.process ? `<span class="pb">${escHTML(b.process)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      ${b.flavors?.length ? `<div class="flavor-tags">${b.flavors.map(f=>`<span class="ftag">${escHTML(f)}</span>`).join('')}</div>` : ''}
+      <div class="card-footer">
+        <span class="stars">${stars(b.rating||0)}</span>
+        ${b.grind ? `<span class="grind-info"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>研磨 ${escHTML(b.grind)}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleRoastFilter(roast) {
+  if (activeRoastFilters.has(roast)) activeRoastFilters.delete(roast);
+  else activeRoastFilters.add(roast);
+  const map = {'淺焙':['fbtn-light','fl'],'中焙':['fbtn-medium','fm'],'深焙':['fbtn-dark','fd']};
+  Object.entries(map).forEach(([r,[id,cls]]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.className = 'filter-btn' + (activeRoastFilters.has(r) ? ' ' + cls : '');
+  });
+  renderCards();
+}
+
+function doLogout() {
+  showConfirmDialog('確定要登出嗎？', `識別碼：${userCode}`, () => {
+    userCode = null;
+    localStorage.removeItem('bj_code');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-page').style.display = 'flex';
+    document.getElementById('code-input').value = '';
+  }, '登出');
+}
+
+// ═══════════════════════════════════
+// ── ADD / EDIT MODAL ──
+// ═══════════════════════════════════
+let formState = {};
+let imagePreviewUrl = '';
+
+const ROAST_OPTS = ['淺焙','中焙','深焙'];
+const PROCESS_OPTS = ['水洗','日曬','蜜處理','厭氧','其他'];
+
+function openAddModal() {
+  editingId = null;
+  formState = {name:'',origin:'',farm:'',roast:'',process:'',flavors:'',grind:'',rating:0,imageUrl:''};
+  imagePreviewUrl = '';
+  renderFormModal();
+}
+
+function openEditModal(id) {
+  const b = beans.find(x => x.id === id);
+  if (!b) return;
+  editingId = id;
+  formState = {...b, flavors: (b.flavors||[]).join('、')};
+  imagePreviewUrl = b.imageUrl || '';
+  renderFormModal();
+}
+
+function renderFormModal() {
+  const mc = document.getElementById('modal-container');
+  mc.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <span class="modal-title">${editingId ? '編輯咖啡豆' : '新增咖啡豆'}</span>
+          <button class="btn-icon" onclick="closeModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <label class="camera-box" for="img-input">
+          ${imagePreviewUrl
+            ? `<img src="${escHTML(imagePreviewUrl)}" class="img-preview" /><button type="button" class="clear-img-btn" onclick="clearImg(event)">移除照片</button>`
+            : `<div class="camera-icon">📷</div><div class="camera-lbl">拍攝或選取咖啡豆包裝</div><div class="camera-sub">AI 自動辨識並填入欄位</div>`}
+          <input type="file" id="img-input" accept="image/*" capture="environment" onchange="handleImageSelect(event)" />
+        </label>
+        <div id="ai-status"></div>
+
+        <div class="form-sec">
+          <label class="form-label">咖啡豆名稱 *</label>
+          <input class="form-input" id="f-name" placeholder="例如：Yirgacheffe Kochere" value="${escHTML(formState.name||'')}" oninput="formState.name=this.value" />
+        </div>
+        <div class="form-sec">
+          <label class="form-label">產區 / 國家</label>
+          <input class="form-input" id="f-origin" placeholder="例如：衣索比亞 Yirgacheffe" value="${escHTML(formState.origin||'')}" oninput="formState.origin=this.value" />
+        </div>
+        <div class="form-sec">
+          <label class="form-label">莊園</label>
+          <input class="form-input" id="f-farm" placeholder="例如：Aadame 莊園" value="${escHTML(formState.farm||'')}" oninput="formState.farm=this.value" />
+        </div>
+        <div class="form-sec">
+          <label class="form-label">焙度</label>
+          <div class="seg-ctrl">${ROAST_OPTS.map(r=>`<button type="button" class="seg-btn${formState.roast===r?' active':''}" onclick="setFormField('roast','${r}',this,'seg-btn')">${r}</button>`).join('')}</div>
+        </div>
+        <div class="form-sec">
+          <label class="form-label">處理法</label>
+          <div class="seg-ctrl">${PROCESS_OPTS.map(p=>`<button type="button" class="seg-btn${formState.process===p?' active':''}" style="font-size:10px" onclick="setFormField('process','${p}',this,'seg-btn')">${p}</button>`).join('')}</div>
+        </div>
+        <div class="form-sec">
+          <label class="form-label">風味描述</label>
+          <input class="form-input" id="f-flavors" placeholder="藍莓、茉莉花、檸檬（頓號或逗號分隔）" value="${escHTML(formState.flavors||'')}" oninput="formState.flavors=this.value" />
+        </div>
+        <div class="form-sec">
+          <label class="form-label">研磨刻度</label>
+          <input class="form-input" id="f-grind" placeholder="例如：#18 或 1C" value="${escHTML(formState.grind||'')}" oninput="formState.grind=this.value" />
+        </div>
+        <div class="form-sec">
+          <label class="form-label">個人評分</label>
+          <div class="rating-wrap" id="rating-wrap">
+            ${[1,2,3,4,5].map(n=>`<button type="button" class="star-btn${(formState.rating||0)>=n?' active':''}" onclick="setRating(${n})">★</button>`).join('')}
+          </div>
+        </div>
+        <button class="save-btn" onclick="saveBean()">${editingId ? '儲存修改' : '加入收藏'}</button>
+      </div>
+    </div>
+  `;
+}
+
+function setFormField(key, val, btn, cls) {
+  formState[key] = val;
+  btn.closest('.seg-ctrl').querySelectorAll('.' + cls).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setRating(n) {
+  formState.rating = n;
+  document.querySelectorAll('#rating-wrap .star-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i < n);
+  });
+}
+
+function clearImg(e) {
+  e.preventDefault(); e.stopPropagation();
+  imagePreviewUrl = '';
+  formState.imageUrl = '';
+  renderFormModal();
+}
+
+function handleImageSelect(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imagePreviewUrl = ev.target.result;
+    formState.imageUrl = ev.target.result;
+    renderFormModal();
+    runAI(file);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runAI(file) {
+  const statusEl = document.getElementById('ai-status');
+  if (!statusEl) return;
+  statusEl.innerHTML = `<div class="ai-result"><div class="ai-loading"><div class="spinner"></div>AI 辨識中…</div></div>`;
+
+  try {
+    const base64 = formState.imageUrl.split(',')[1];
+    const mediaType = file.type || 'image/jpeg';
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        messages: [{
+          role: 'user',
+          content: [
+            {type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
+            {type:'text', text:'你是專業咖啡師。從這張咖啡包裝照片辨識資訊，只回傳JSON：{"name":"","origin":"","farm":"","roast":"淺焙或中焙或深焙","process":"水洗或日曬或蜜處理或厭氧或其他","flavors":[],"note":""}。無法辨識的欄位留空字串。'}
+          ]
+        }]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content||[]).map(c=>c.text||'').join('');
+    const result = JSON.parse(text.replace(/```json|```/g,'').trim());
+
+    if (!formState.name && result.name) { formState.name = result.name; }
+    if (!formState.origin && result.origin) { formState.origin = result.origin; }
+    if (!formState.farm && result.farm) { formState.farm = result.farm; }
+    if (ROAST_OPTS.includes(result.roast)) formState.roast = result.roast;
+    if (PROCESS_OPTS.includes(result.process)) formState.process = result.process;
+    if (!formState.flavors && result.flavors?.length) formState.flavors = result.flavors.join('、');
+
+    const conf = result.note ? `（${result.note}）` : '';
+    if (statusEl) statusEl.innerHTML = `<div class="ai-result"><div class="ai-result-title">✦ AI 辨識完成 ${conf}</div><div class="ai-result-text">欄位已自動帶入，請確認後儲存</div></div>`;
+
+    // Update form inputs
+    const inputs = {name:'f-name', origin:'f-origin', farm:'f-farm', flavors:'f-flavors'};
+    Object.entries(inputs).forEach(([k,id]) => {
+      const el = document.getElementById(id);
+      if (el && formState[k]) el.value = formState[k];
+    });
+    // Update seg buttons
+    document.querySelectorAll('#modal-container .seg-ctrl').forEach(ctrl => {
+      ctrl.querySelectorAll('.seg-btn').forEach(btn => {
+        if (btn.textContent === formState.roast || btn.textContent === formState.process) {
+          btn.classList.add('active');
+        }
+      });
+    });
+  } catch(err) {
+    if (statusEl) statusEl.innerHTML = `<div class="ai-result" style="border-color:rgba(200,80,80,.25);background:rgba(200,80,80,.08)"><div class="ai-result-title" style="color:#c85050">AI 辨識失敗</div><div class="ai-result-text">請手動填寫各欄位</div></div>`;
+  }
+}
+
+function saveBean() {
+  const name = document.getElementById('f-name')?.value.trim();
+  if (!name) { showToast('請填入咖啡豆名稱'); return; }
+  formState.name = name;
+  formState.origin = document.getElementById('f-origin')?.value.trim()||formState.origin;
+  formState.farm = document.getElementById('f-farm')?.value.trim()||formState.farm;
+  formState.flavors = document.getElementById('f-flavors')?.value||formState.flavors;
+  formState.grind = document.getElementById('f-grind')?.value.trim()||formState.grind;
+
+  const flavorsArr = formState.flavors
+    ? formState.flavors.split(/[,，、\s]+/).map(s=>s.trim()).filter(Boolean)
+    : [];
+
+  if (editingId) {
+    const idx = beans.findIndex(b => b.id === editingId);
+    if (idx > -1) beans[idx] = {...beans[idx], ...formState, flavors:flavorsArr};
+    showToast('已更新 ✓');
+  } else {
+    beans.unshift({id:genId(), ...formState, flavors:flavorsArr, createdAt:Date.now()});
+    showToast('已加入收藏 ✓');
+  }
+  saveData();
+  closeModal();
+  renderCollection();
+}
+
+function closeModal() {
+  document.getElementById('modal-container').innerHTML = '';
+}
+
+// ── Confirm Dialog ──
+function showConfirmDialog(title, desc, onOk, okLabel='確認') {
+  const mc = document.getElementById('modal-container');
+  mc.innerHTML = `
+    <div class="modal-overlay" style="align-items:center">
+      <div class="confirm-box">
+        <div class="confirm-title">${escHTML(title)}</div>
+        <div class="confirm-desc">${escHTML(desc)}</div>
+        <div class="confirm-actions">
+          <button class="confirm-cancel" onclick="closeModal()">取消</button>
+          <button class="confirm-ok" id="confirm-ok-btn">${escHTML(okLabel)}</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('confirm-ok-btn').onclick = () => { closeModal(); onOk(); };
+}
+
+function confirmDelete(id, name) {
+  showConfirmDialog(`刪除「${name}」？`, '此操作無法復原', () => {
+    beans = beans.filter(b => b.id !== id);
+    saveData();
+    showToast('已刪除');
+    renderCollection();
+  }, '刪除');
+}
+
+// ═══════════════════════════════════
+// ── ANALYSIS PAGE ──
+// ═══════════════════════════════════
+const COUNTRY_COORDS = {
+  '衣索比亞':[172,76],'巴西':[82,98],'哥倫比亞':[62,78],
+  '哥斯大黎加':[48,72],'瓜地馬拉':[44,67],'巴拿馬':[50,74],
+  '肯亞':[170,84],'印尼':[210,82],'牙買加':[58,68],
+  '盧安達':[158,86],'坦尚尼亞':[162,88],'葉門':[168,65],
+  'Ethiopia':[172,76],'Kenya':[170,84],'Colombia':[62,78],
+  'Brazil':[82,98],'Panama':[50,74],'Guatemala':[44,67],
+};
+
+function getCoords(origin) {
+  if (!origin) return null;
+  for (const [k,v] of Object.entries(COUNTRY_COORDS)) {
+    if (origin.includes(k)) return v;
+  }
+  return null;
+}
+
+function renderAnalysis() {
+  const total = beans.length;
+  const roastCounts = {淺焙:0,中焙:0,深焙:0};
+  beans.forEach(b => { if(roastCounts[b.roast]!==undefined) roastCounts[b.roast]++; });
+  const maxR = Math.max(...Object.values(roastCounts), 1);
+  const avgR = beans.filter(b=>b.rating).length
+    ? (beans.reduce((s,b)=>s+(b.rating||0),0)/beans.filter(b=>b.rating).length).toFixed(1)
+    : '—';
+  const countries = [...new Set(beans.map(b=>b.origin?.split(/[\s·]/)[0]).filter(Boolean))];
+
+  const allFlavors = {};
+  beans.forEach(b => (b.flavors||[]).forEach(f => { allFlavors[f]=(allFlavors[f]||0)+1; }));
+  const topFlavors = Object.entries(allFlavors).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([f])=>f);
+
+  document.getElementById('page').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">風味分析</div>
+        <div class="page-sub">根據你的收藏產生洞察</div>
+      </div>
+    </div>
+    <div style="padding:12px 16px 0">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-lbl">收藏總數</div></div>
+        <div class="stat-card"><div class="stat-val">${countries.length}</div><div class="stat-lbl">產區國家</div></div>
+        <div class="stat-card"><div class="stat-val">${avgR}</div><div class="stat-lbl">平均評分</div></div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-title">🔥 焙度分布</div>
+        ${Object.entries(roastCounts).map(([roast,count])=>`
+          <div class="rbar-row">
+            <div class="rbar-label" style="color:${roast==='淺焙'?'var(--roast-l)':roast==='中焙'?'var(--roast-m)':'var(--roast-d)'}">${roast}</div>
+            <div class="rbar-wrap"><div class="rbar-fill" style="width:${Math.round(count/maxR*100)}%;background:${roast==='淺焙'?'var(--roast-l)':roast==='中焙'?'var(--roast-m)':'var(--roast-d)'}"></div></div>
+            <div class="rbar-n">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        🌍 產區地圖
+        <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:auto">點選產區查看風味</span>
+      </div>
+      <canvas id="map-canvas" class="map-canvas" width="400" height="160"></canvas>
+
+      <div class="region-box" id="region-box">
+        <div class="region-title" id="region-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span id="region-label">所有產區風味</span>
+          <button class="clear-filter" id="clear-region" style="display:none" onclick="clearRegion()">清除篩選</button>
+        </div>
+        <div class="flavor-tags" id="region-flavors">
+          ${topFlavors.map(f=>`<span class="ftag">${escHTML(f)}</span>`).join('') || '<span style="font-size:11px;color:var(--text3)">新增咖啡豆後將顯示風味標籤</span>'}
+        </div>
+      </div>
+
+      <div class="ai-insight">
+        <div class="ai-insight-header">
+          <span>✦ AI 個人化分析</span>
+          <button class="btn-ghost" style="font-size:11px;padding:5px 10px" onclick="runInsight()">${aiInsightText?'重新分析':'開始分析'}</button>
+        </div>
+        <div class="ai-insight-text" id="insight-text">
+          ${aiInsightText || '收藏 2 支以上後，AI 將分析你的口味偏好並推薦下一支豆子。'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  drawMap();
+}
+
+function drawMap() {
+  const canvas = document.getElementById('map-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#1c1208'; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.5;
+  for(let x=0;x<=W;x+=W/4){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<=H;y+=H/3){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Group beans by coords
+  const regionMap = {};
+  beans.forEach(b => {
+    const coords = getCoords(b.origin);
+    if (!coords) return;
+    const key = b.origin?.split(/[\s·]/)[0]||b.origin;
+    if (!regionMap[key]) regionMap[key]={coords,flavors:new Set(),origin:b.origin};
+    (b.flavors||[]).forEach(f=>regionMap[key].flavors.add(f));
+  });
+
+  const scale = [W/270, H/140];
+  Object.entries(regionMap).forEach(([region,{coords,origin}]) => {
+    const [cx,cy] = [coords[0]*scale[0], coords[1]*scale[1]];
+    const isSelected = selectedRegion === region;
+
+    // Glow
+    const g = ctx.createRadialGradient(cx,cy,0,cx,cy,isSelected?22:14);
+    g.addColorStop(0,`rgba(200,131,74,${isSelected?.45:.2})`);
+    g.addColorStop(1,'rgba(200,131,74,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,isSelected?22:14,0,Math.PI*2); ctx.fill();
+
+    // Dot
+    ctx.fillStyle=isSelected?'#e8a060':'#c8834a';
+    ctx.beginPath(); ctx.arc(cx,cy,isSelected?7:5,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(240,232,216,0.7)'; ctx.lineWidth=1.5;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle='rgba(200,131,74,0.9)'; ctx.font='9px sans-serif'; ctx.textAlign='left';
+    ctx.fillText(region, cx+9, cy+3);
+  });
+
+  // Click handler
+  canvas.onclick = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX-rect.left)*(W/rect.width);
+    const my = (e.clientY-rect.top)*(H/rect.height);
+    let hit = null;
+    Object.entries(regionMap).forEach(([region,{coords}]) => {
+      const [cx,cy]=[coords[0]*scale[0],coords[1]*scale[1]];
+      const d=Math.hypot(mx-cx,my-cy);
+      if(d<18) hit=region;
+    });
+    if (hit) {
+      if (selectedRegion === hit) { clearRegion(); return; }
+      selectedRegion = hit;
+      const rFlavors = [...regionMap[hit].flavors];
+      document.getElementById('region-label').textContent = hit + ' 的風味';
+      document.getElementById('clear-region').style.display='inline';
+      document.getElementById('region-flavors').innerHTML = rFlavors.length
+        ? rFlavors.map(f=>`<span class="ftag">${escHTML(f)}</span>`).join('')
+        : `<span style="font-size:11px;color:var(--text3)">此產區尚無風味記錄</span>`;
+      const box = document.getElementById('region-box');
+      box.style.borderColor='rgba(200,131,74,0.35)';
+      box.style.background='rgba(200,131,74,0.06)';
+      document.querySelector('#region-title span:first-of-type').style.color='var(--accent2)';
+      drawMap();
+    }
+  };
+}
+
+function clearRegion() {
+  selectedRegion = null;
+  const allFlavors = {};
+  beans.forEach(b=>(b.flavors||[]).forEach(f=>{allFlavors[f]=(allFlavors[f]||0)+1;}));
+  const top = Object.entries(allFlavors).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([f])=>f);
+  document.getElementById('region-label').textContent='所有產區風味';
+  document.getElementById('clear-region').style.display='none';
+  document.getElementById('region-flavors').innerHTML = top.map(f=>`<span class="ftag">${escHTML(f)}</span>`).join('')||'<span style="font-size:11px;color:var(--text3)">新增咖啡豆後將顯示風味標籤</span>';
+  const box=document.getElementById('region-box');
+  box.style.borderColor='rgba(74,158,122,0.2)';
+  box.style.background='';
+  document.querySelector('#region-title span:first-of-type').style.color='var(--green)';
+  drawMap();
+}
+
+async function runInsight() {
+  if (beans.length < 2) { showToast('至少需要 2 支咖啡豆才能分析'); return; }
+  const el = document.getElementById('insight-text');
+  if (!el) return;
+  el.innerHTML = '<div class="ai-loading"><div class="spinner"></div>AI 分析你的喜好中…</div>';
+
+  try {
+    const summary = beans.map(b=>({name:b.name,origin:b.origin,roast:b.roast,process:b.process,flavors:b.flavors,rating:b.rating,grind:b.grind}));
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6', max_tokens:800,
+        messages:[{role:'user',content:`你是精品咖啡顧問。根據以下收藏用繁體中文分析（150字內，像朋友聊天，不要條列）：\n${JSON.stringify(summary)}\n分析偏好的產區、處理法風味傾向、焙度習慣，並推薦下一支豆子類型。`}]
+      })
+    });
+    const data = await res.json();
+    aiInsightText = (data.content||[]).map(c=>c.text||'').join('');
+    el.textContent = aiInsightText;
+  } catch {
+    el.textContent = '分析失敗，請確認 API Key 設定後再試。';
+  }
+}
+</script>
+</body>
+</html>
