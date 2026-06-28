@@ -293,9 +293,6 @@ function renderCollection() {
         <div class="page-sub" id="count-sub">${subtitle}</div>
       </div>
       <div class="header-actions">
-        <button class="btn-icon" onclick="openSettings()" title="設定 API Key">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        </button>
         <button class="btn-icon" onclick="doLogout()" title="登出">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
@@ -362,7 +359,7 @@ function renderCards() {
       <div class="card-top">
         <div class="bean-img">${b.imageUrl ? `<img src="${escHTML(b.imageUrl)}" alt="${escHTML(b.name)}" />` : '☕'}</div>
         <div class="bean-info">
-          <div class="bean-name">${escHTML(b.name||'未命名')}</div>
+          <div class="bean-name">${escHTML(b.name||'未命名店家')}</div>
           <div class="bean-origin">${escHTML([b.origin,b.farm].filter(Boolean).join(' · ')||'產區未填寫')}</div>
           <div class="badges">
             ${b.roast ? `<span class="rb ${roastClass(b.roast)}">${escHTML(b.roast)}</span>` : ''}
@@ -391,38 +388,8 @@ function toggleRoastFilter(roast) {
   renderCards();
 }
 
-function openSettings() {
-  const current = localStorage.getItem('bj_gemini_key') || '';
-  const mc = document.getElementById('modal-container');
-  mc.innerHTML = `
-    <div class="modal-overlay" onclick="if(event.target===this)closeModal()" style="align-items:center">
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-lg);padding:24px;width:320px;max-width:90vw">
-        <div style="font-size:16px;font-weight:600;margin-bottom:6px">⚙️ Gemini API Key</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.7">Key 只存在你的瀏覽器，不會上傳任何地方。<br>到 <a href="https://aistudio.google.com" target="_blank" style="color:var(--accent2)">aistudio.google.com</a> 取得。</div>
-        <input id="key-input" class="form-input" type="password" placeholder="貼上你的 Gemini API Key" value="${escHTML(current)}" style="margin-bottom:14px;letter-spacing:1px" />
-        <div style="display:flex;gap:8px">
-          <button class="btn-ghost" style="flex:1" onclick="closeModal()">取消</button>
-          <button class="btn-primary" style="flex:1;justify-content:center" onclick="saveApiKey()">儲存</button>
-        </div>
-        ${current ? '<button style="margin-top:10px;width:100%;background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:var(--font)" onclick="clearApiKey()">清除 Key</button>' : ''}
-      </div>
-    </div>
-  `;
-}
 
-function saveApiKey() {
-  const key = document.getElementById('key-input')?.value.trim();
-  if (!key) { showToast('請輸入 API Key'); return; }
-  localStorage.setItem('bj_gemini_key', key);
-  closeModal();
-  showToast('API Key 已儲存 ✓');
-}
 
-function clearApiKey() {
-  localStorage.removeItem('bj_gemini_key');
-  closeModal();
-  showToast('已清除 API Key');
-}
 
 function doLogout() {
   showConfirmDialog('確定要登出嗎？', `識別碼：${userCode}`, () => {
@@ -445,7 +412,7 @@ const PROCESS_OPTS = ['水洗','日曬','蜜處理','厭氧','其他'];
 
 function openAddModal() {
   editingId = null;
-  formState = {name:'',origin:'',farm:'',roast:'',process:'',flavors:'',grind:'',rating:0,imageUrl:''};
+  formState = {name:'',origin:'',farm:'',roast:'',process:'',processes:[],flavors:'',grind:'',rating:0,imageUrl:''};
   imagePreviewUrl = '';
   renderFormModal();
 }
@@ -454,7 +421,7 @@ function openEditModal(id) {
   const b = beans.find(x => x.id === id);
   if (!b) return;
   editingId = id;
-  formState = {...b, flavors: (b.flavors||[]).join('、')};
+  formState = {...b, flavors: (b.flavors||[]).join('、'), processes: [...(b.processes || (b.process ? [b.process] : []))]};
   imagePreviewUrl = b.imageUrl || '';
   renderFormModal();
 }
@@ -471,17 +438,16 @@ function renderFormModal() {
           </button>
         </div>
 
-        <label class="camera-box" for="img-input">
+        <label class="camera-box" for="img-input" style="border-style:solid;border-color:var(--border)">
           ${imagePreviewUrl
             ? `<img src="${escHTML(imagePreviewUrl)}" class="img-preview" /><button type="button" class="clear-img-btn" onclick="clearImg(event)">移除照片</button>`
-            : `<div class="camera-icon">📷</div><div class="camera-lbl">拍攝或選取咖啡豆包裝</div><div class="camera-sub">AI 自動辨識並填入欄位</div>`}
+            : `<div class="camera-icon">📷</div><div class="camera-lbl">拍攝或選取包裝照片（選填）</div><div class="camera-sub">照片只儲存在你的瀏覽器</div>`}
           <input type="file" id="img-input" accept="image/*" capture="environment" onchange="handleImageSelect(event)" />
         </label>
-        <div id="ai-status"></div>
 
         <div class="form-sec">
-          <label class="form-label">咖啡豆名稱 *</label>
-          <input class="form-input" id="f-name" placeholder="例如：Yirgacheffe Kochere" value="${escHTML(formState.name||'')}" oninput="formState.name=this.value" />
+          <label class="form-label">店家名稱 *</label>
+          <input class="form-input" id="f-name" placeholder="例如：Fika Fika、Simple Kaffa" value="${escHTML(formState.name||'')}" oninput="formState.name=this.value" />
         </div>
         <div class="form-sec">
           <label class="form-label">產區 / 國家</label>
@@ -496,8 +462,8 @@ function renderFormModal() {
           <div class="seg-ctrl">${ROAST_OPTS.map(r=>`<button type="button" class="seg-btn${formState.roast===r?' active':''}" onclick="setFormField('roast','${r}',this,'seg-btn')">${r}</button>`).join('')}</div>
         </div>
         <div class="form-sec">
-          <label class="form-label">處理法</label>
-          <div class="seg-ctrl">${PROCESS_OPTS.map(p=>`<button type="button" class="seg-btn${formState.process===p?' active':''}" style="font-size:10px" onclick="setFormField('process','${p}',this,'seg-btn')">${p}</button>`).join('')}</div>
+          <label class="form-label">處理法（可複選）</label>
+          <div class="seg-ctrl" style="flex-wrap:wrap">${PROCESS_OPTS.map(p=>{const selected=(formState.processes||[]).includes(p);return `<button type="button" class="seg-btn${selected?' active':''}" style="font-size:10px;flex:none;padding:7px 12px" onclick="toggleProcess('${p}',this)">${p}</button>`;}).join('')}</div>
         </div>
         <div class="form-sec">
           <label class="form-label">風味描述</label>
@@ -525,6 +491,20 @@ function setFormField(key, val, btn, cls) {
   btn.classList.add('active');
 }
 
+function toggleProcess(val, btn) {
+  if (!formState.processes) formState.processes = [];
+  const idx = formState.processes.indexOf(val);
+  if (idx > -1) {
+    formState.processes.splice(idx, 1);
+    btn.classList.remove('active');
+  } else {
+    formState.processes.push(val);
+    btn.classList.add('active');
+  }
+  // Keep legacy process field in sync (first selected value)
+  formState.process = formState.processes[0] || '';
+}
+
 function setRating(n) {
   formState.rating = n;
   document.querySelectorAll('#rating-wrap .star-btn').forEach((btn, i) => {
@@ -547,65 +527,10 @@ function handleImageSelect(e) {
     imagePreviewUrl = ev.target.result;
     formState.imageUrl = ev.target.result;
     renderFormModal();
-    runAI(file);
   };
   reader.readAsDataURL(file);
 }
 
-async function runAI(file) {
-  const statusEl = document.getElementById('ai-status');
-  if (!statusEl) return;
-  statusEl.innerHTML = `<div class="ai-result"><div class="ai-loading"><div class="spinner"></div>AI 辨識中…</div></div>`;
-
-  try {
-    const base64 = formState.imageUrl.split(',')[1];
-    const GEMINI_KEY = localStorage.getItem('bj_gemini_key') || '';
-    if (!GEMINI_KEY) { if (statusEl) statusEl.innerHTML = '<div class="ai-result" style="border-color:rgba(200,80,80,.25);background:rgba(200,80,80,.08)"><div class="ai-result-title" style="color:#c85050">請先設定 Gemini API Key</div><div class="ai-result-text">點右上角齒輪圖示輸入 Key</div></div>'; return; }
-    const isAQKey = GEMINI_KEY.startsWith('AQ.');
-    const imageUrl = isAQKey
-      ? 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
-      : `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
-    const imageHeaders = isAQKey
-      ? {'Content-Type':'application/json', 'x-goog-api-key': GEMINI_KEY}
-      : {'Content-Type':'application/json'};
-    const res = await fetch(imageUrl, {
-      method: 'POST',
-      headers: imageHeaders,
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {inline_data: {mime_type: file.type || 'image/jpeg', data: base64}},
-            {text: '你是專業咖啡師。從這張咖啡包裝照片辨識資訊，只回傳JSON不要加任何說明或markdown：{"name":"","origin":"","farm":"","roast":"淺焙或中焙或深焙","process":"水洗或日曬或蜜處理或厭氧或其他","flavors":[],"note":""}。無法辨識的欄位留空字串。'}
-          ]
-        }]
-      })
-    });
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    const result = JSON.parse(text.replace(/```json|```/g,'').trim());
-
-    // Fill formState with AI results
-    if (result.name) formState.name = result.name;
-    if (result.origin) formState.origin = result.origin;
-    if (result.farm) formState.farm = result.farm;
-    if (ROAST_OPTS.includes(result.roast)) formState.roast = result.roast;
-    if (PROCESS_OPTS.includes(result.process)) formState.process = result.process;
-    if (result.flavors && result.flavors.length) formState.flavors = result.flavors.join('、');
-
-    // Re-render modal so all fields and seg buttons reflect AI data
-    const scrollTop = document.querySelector('.modal-sheet') ? document.querySelector('.modal-sheet').scrollTop : 0;
-    renderFormModal();
-    requestAnimationFrame(function() {
-      const sheet = document.querySelector('.modal-sheet');
-      if (sheet) sheet.scrollTop = scrollTop;
-      const newStatus = document.getElementById('ai-status');
-      const conf = result.note ? '（' + result.note + '）' : '';
-      if (newStatus) newStatus.innerHTML = '<div class="ai-result"><div class="ai-result-title">✦ AI 辨識完成 ' + conf + '</div><div class="ai-result-text">欄位已自動帶入，請確認後儲存</div></div>';
-    });
-  } catch(err) {
-    if (statusEl) statusEl.innerHTML = `<div class="ai-result" style="border-color:rgba(200,80,80,.25);background:rgba(200,80,80,.08)"><div class="ai-result-title" style="color:#c85050">AI 辨識失敗</div><div class="ai-result-text">請手動填寫各欄位</div></div>`;
-  }
-}
 
 function saveBean() {
   const name = document.getElementById('f-name')?.value.trim();
@@ -619,13 +544,14 @@ function saveBean() {
   const flavorsArr = formState.flavors
     ? formState.flavors.split(/[,，、\s]+/).map(s=>s.trim()).filter(Boolean)
     : [];
+  const processesArr = formState.processes || (formState.process ? [formState.process] : []);
 
   if (editingId) {
     const idx = beans.findIndex(b => b.id === editingId);
-    if (idx > -1) beans[idx] = {...beans[idx], ...formState, flavors:flavorsArr};
+    if (idx > -1) beans[idx] = {...beans[idx], ...formState, flavors:flavorsArr, processes:processesArr, process:processesArr[0]||''};
     showToast('已更新 ✓');
   } else {
-    beans.unshift({id:genId(), ...formState, flavors:flavorsArr, createdAt:Date.now()});
+    beans.unshift({id:genId(), ...formState, flavors:flavorsArr, processes:processesArr, process:processesArr[0]||'', createdAt:Date.now()});
     showToast('已加入收藏 ✓');
   }
   saveData();
@@ -844,36 +770,39 @@ function clearRegion() {
   drawMap();
 }
 
-async function runInsight() {
-  if (beans.length < 2) { showToast('至少需要 2 支咖啡豆才能分析'); return; }
+function runInsight() {
   const el = document.getElementById('insight-text');
   if (!el) return;
-  el.innerHTML = '<div class="ai-loading"><div class="spinner"></div>AI 分析你的喜好中…</div>';
-
-  try {
-    const summary = beans.map(b=>({name:b.name,origin:b.origin,roast:b.roast,process:b.process,flavors:b.flavors,rating:b.rating,grind:b.grind}));
-    const GEMINI_KEY = localStorage.getItem('bj_gemini_key') || '';
-    if (!GEMINI_KEY) { el.textContent = '請先設定 Gemini API Key（點右上角齒輪）'; return; }
-    const isAQKey2 = GEMINI_KEY.startsWith('AQ.');
-    const analysisUrl = isAQKey2
-      ? 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
-      : `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
-    const analysisHeaders = isAQKey2
-      ? {'Content-Type':'application/json', 'x-goog-api-key': GEMINI_KEY}
-      : {'Content-Type':'application/json'};
-    const res = await fetch(analysisUrl, {
-      method:'POST',
-      headers: analysisHeaders,
-      body: JSON.stringify({
-        contents:[{parts:[{text:`你是精品咖啡顧問。根據以下收藏用繁體中文分析（150字內，像朋友聊天，不要條列）：\n${JSON.stringify(summary)}\n分析偏好的產區、處理法風味傾向、焙度習慣，並推薦下一支豆子類型。`}]}]
-      })
-    });
-    const data = await res.json();
-    aiInsightText = data.candidates?.[0]?.content?.parts?.[0]?.text || '分析失敗，請稍後再試。';
-    el.textContent = aiInsightText;
-  } catch {
-    el.textContent = '分析失敗，請確認 API Key 設定後再試。';
-  }
+  if (beans.length < 3) { showToast('至少需要 3 支咖啡豆才能分析'); return; }
+  // Simple local analysis without AI
+  const roastCount = {};
+  const processCount = {};
+  const flavorCount = {};
+  const originCount = {};
+  beans.forEach(b => {
+    if (b.roast) roastCount[b.roast] = (roastCount[b.roast]||0)+1;
+    if (b.process) processCount[b.process] = (processCount[b.process]||0)+1;
+    (b.flavors||[]).forEach(f => { flavorCount[f] = (flavorCount[f]||0)+1; });
+    const country = b.origin ? b.origin.split(/[\s·]/)[0] : null;
+    if (country) originCount[country] = (originCount[country]||0)+1;
+  });
+  const topRoast = Object.entries(roastCount).sort((a,b)=>b[1]-a[1])[0];
+  const topProcess = Object.entries(processCount).sort((a,b)=>b[1]-a[1])[0];
+  const topFlavors = Object.entries(flavorCount).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([f])=>f);
+  const topOrigin = Object.entries(originCount).sort((a,b)=>b[1]-a[1])[0];
+  const avgRating = beans.filter(b=>b.rating).length
+    ? (beans.reduce((s,b)=>s+(b.rating||0),0)/beans.filter(b=>b.rating).length).toFixed(1)
+    : null;
+  let text = '';
+  if (topOrigin) text += `你最常喝的是${topOrigin[0]}的咖啡豆（${topOrigin[1]}支）。`;
+  if (topRoast) text += `焙度偏好${topRoast[0]}（${topRoast[1]}支）。`;
+  if (topProcess) text += `最常接觸${topProcess[0]}處理法。`;
+  if (topFlavors.length) text += `你的收藏中最常出現的風味是${topFlavors.join('、')}。`;
+  if (avgRating) text += `平均評分 ${avgRating} 分，`;
+  const highRated = beans.filter(b=>b.rating>=4);
+  if (highRated.length) text += `其中 ${highRated.length} 支評分在 4 分以上。`;
+  aiInsightText = text || '繼續增加收藏，會產生更多洞察！';
+  el.textContent = aiInsightText;
 }
 </script>
 </body>
