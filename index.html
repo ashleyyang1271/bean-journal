@@ -140,7 +140,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:va
 .rbar-wrap{flex:1;background:var(--bg3);border-radius:4px;height:7px;overflow:hidden}
 .rbar-fill{height:100%;border-radius:4px;transition:width .6s ease}
 .rbar-n{font-size:11px;color:var(--text3);width:18px;text-align:right}
-.map-canvas{width:100%;height:160px;border-radius:var(--r-md);background:var(--bg3);cursor:pointer;display:block}
+.map-canvas{width:100%;height:200px;border-radius:var(--r-md);background:#0d1a2a;cursor:pointer;display:block}
 .region-box{background:var(--bg2);border:1px solid rgba(74,158,122,.2);border-radius:var(--r-md);padding:12px;margin-bottom:12px;transition:all .3s}
 .region-title{font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;display:flex;align-items:center;gap:5px}
 .clear-filter{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;font-family:var(--font);text-decoration:underline;margin-left:auto}
@@ -211,6 +211,7 @@ input,textarea,select{font-size:16px !important;}
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <script>
 // ── State ──
 let userCode = localStorage.getItem('bj_code') || null;
@@ -613,12 +614,22 @@ function confirmDelete(id, name) {
 // ── ANALYSIS PAGE ──
 // ═══════════════════════════════════
 const COUNTRY_COORDS = {
-  '衣索比亞':[172,76],'巴西':[82,98],'哥倫比亞':[62,78],
-  '哥斯大黎加':[48,72],'瓜地馬拉':[44,67],'巴拿馬':[50,74],
-  '肯亞':[170,84],'印尼':[210,82],'牙買加':[58,68],
-  '盧安達':[158,86],'坦尚尼亞':[162,88],'葉門':[168,65],
-  'Ethiopia':[172,76],'Kenya':[170,84],'Colombia':[62,78],
-  'Brazil':[82,98],'Panama':[50,74],'Guatemala':[44,67],
+  // [longitude, latitude]
+  '衣索比亞':[38.7, 9.0],'巴西':[-51.9, -14.2],'哥倫比亞':[-74.3, 4.6],
+  '哥斯大黎加':[-83.8, 9.7],'瓜地馬拉':[-90.2, 15.8],'巴拿馬':[-80.8, 8.9],
+  '肯亞':[36.8, -1.3],'印尼':[113.9, -0.8],'牙買加':[-77.3, 18.1],
+  '盧安達':[29.9, -1.9],'坦尚尼亞':[34.9, -6.4],'葉門':[48.5, 15.6],
+  '洪都拉斯':[-86.2, 15.2],'墨西哥':[-102.6, 23.6],'秘魯':[-75.0, -9.2],
+  '玻利維亞':[-64.9, -16.3],'印度':[78.9, 20.6],'越南':[108.3, 14.1],
+  '中國':[104.2, 35.9],'台灣':[121.0, 23.7],'日本':[138.3, 36.2],
+  '巴布亞新幾內亞':[143.9, -6.3],'薩爾瓦多':[-88.9, 13.8],
+  '尼加拉瓜':[-85.2, 12.9],'委內瑞拉':[-66.6, 6.4],
+  'Ethiopia':[38.7, 9.0],'Kenya':[36.8, -1.3],'Colombia':[-74.3, 4.6],
+  'Brazil':[-51.9, -14.2],'Panama':[-80.8, 8.9],'Guatemala':[-90.2, 15.8],
+  'Indonesia':[113.9, -0.8],'India':[78.9, 20.6],'Yemen':[48.5, 15.6],
+  'Honduras':[-86.2, 15.2],'Peru':[-75.0, -9.2],'Vietnam':[108.3, 14.1],
+  'China':[104.2, 35.9],'Taiwan':[121.0, 23.7],'Japan':[138.3, 36.2],
+  'Rwanda':[29.9, -1.9],'Tanzania':[34.9, -6.4],'Mexico':[-102.6, 23.6],
 };
 
 function getCoords(origin) {
@@ -672,7 +683,10 @@ function renderAnalysis() {
         🌍 產區地圖
         <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:auto">點選產區查看風味</span>
       </div>
-      <canvas id="map-canvas" class="map-canvas" width="400" height="160"></canvas>
+      <div id="map-canvas" class="map-canvas" style="position:relative;overflow:hidden">
+  <canvas id="world-canvas" style="width:100%;height:100%;display:block"></canvas>
+  <div id="map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.3);font-family:sans-serif">載入地圖中…</div>
+</div>
 
       <div class="region-box" id="region-box">
         <div class="region-title" id="region-title">
@@ -701,75 +715,170 @@ function renderAnalysis() {
 }
 
 function drawMap() {
-  const canvas = document.getElementById('map-canvas');
+  const container = document.getElementById('map-canvas');
+  const canvas = document.getElementById('world-canvas');
   if (!canvas) return;
+
+  // Set actual pixel size
+  const rect = container.getBoundingClientRect();
+  const W = rect.width || 400;
+  const H = rect.height || 200;
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
   const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#1c1208'; ctx.fillRect(0,0,W,H);
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  if (window._worldGeo) {
+    renderMap(ctx, W, H);
+  } else {
+    // Load topojson world data
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+      .then(r => r.json())
+      .then(topo => {
+        // Convert topojson to geojson features
+        const land = topojson.feature(topo, topo.objects.land);
+        window._worldGeo = land;
+        document.getElementById('map-loading').style.display = 'none';
+        renderMap(ctx, W, H);
+      })
+      .catch(() => {
+        document.getElementById('map-loading').textContent = '地圖載入失敗';
+      });
+  }
+}
+
+function project(lon, lat, W, H) {
+  // Mercator projection clamped to lat -75~80 to avoid poles being cut
+  const MAX_LAT = 75;
+  const scale = W / (2 * Math.PI);
+  const x = (lon + 180) / 360 * W;
+  // Project top and bottom bounds to get full height range
+  const latTop = MAX_LAT * Math.PI / 180;
+  const latBot = -MAX_LAT * Math.PI / 180;
+  const yTop = -Math.log(Math.tan(Math.PI/4 + latTop/2)) * scale;
+  const yBot = -Math.log(Math.tan(Math.PI/4 + latBot/2)) * scale;
+  const totalH = yBot - yTop;
+  const latRad = Math.max(-MAX_LAT, Math.min(MAX_LAT, lat)) * Math.PI / 180;
+  const yMerc = -Math.log(Math.tan(Math.PI/4 + latRad/2)) * scale;
+  const y = ((yMerc - yTop) / totalH) * H;
+  return [x, y];
+}
+
+function renderMap(ctx, W, H) {
+  ctx.clearRect(0, 0, W, H);
+
+  // Ocean
+  ctx.fillStyle = '#0d1a2a';
+  ctx.fillRect(0, 0, W, H);
 
   // Grid
-  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.5;
-  for(let x=0;x<=W;x+=W/4){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<=H;y+=H/3){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 0.5;
+  for (let lon = -180; lon <= 180; lon += 60) {
+    const [x] = project(lon, 0, W, H);
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let lat = -60; lat <= 60; lat += 30) {
+    const [, y] = project(0, lat, W, H);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  // Equator highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 0.8;
+  const [, eqY] = project(0, 0, W, H);
+  ctx.beginPath(); ctx.moveTo(0, eqY); ctx.lineTo(W, eqY); ctx.stroke();
 
-  // Group beans by coords
+  // Draw land from GeoJSON
+  const geo = window._worldGeo;
+  if (geo) {
+    ctx.fillStyle = 'rgba(55,78,45,0.92)';
+    ctx.strokeStyle = 'rgba(90,120,65,0.5)';
+    ctx.lineWidth = 0.5;
+
+    geo.features.forEach(feature => {
+      const geom = feature.geometry;
+      const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+      polys.forEach(poly => {
+        poly.forEach(ring => {
+          ctx.beginPath();
+          ring.forEach(([lon, lat], i) => {
+            const [x, y] = project(lon, lat, W, H);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        });
+      });
+    });
+  }
+
+  // Draw pins
   const regionMap = {};
   beans.forEach(b => {
     const coords = getCoords(b.origin);
     if (!coords) return;
-    const key = b.origin?.split(/[\s·]/)[0]||b.origin;
-    if (!regionMap[key]) regionMap[key]={coords,flavors:new Set(),origin:b.origin};
-    (b.flavors||[]).forEach(f=>regionMap[key].flavors.add(f));
+    const key = b.origin?.split(/[\s·]/)[0] || b.origin;
+    if (!regionMap[key]) regionMap[key] = {coords, flavors: new Set()};
+    (b.flavors||[]).forEach(f => regionMap[key].flavors.add(f));
   });
 
-  const scale = [W/270, H/140];
-  Object.entries(regionMap).forEach(([region,{coords,origin}]) => {
-    const [cx,cy] = [coords[0]*scale[0], coords[1]*scale[1]];
+  Object.entries(regionMap).forEach(([region, {coords}]) => {
+    const [lon, lat] = coords;
+    const [cx, cy] = project(lon, lat, W, H);
     const isSelected = selectedRegion === region;
+    const r = isSelected ? 8 : 5;
 
     // Glow
-    const g = ctx.createRadialGradient(cx,cy,0,cx,cy,isSelected?22:14);
-    g.addColorStop(0,`rgba(200,131,74,${isSelected?.45:.2})`);
-    g.addColorStop(1,'rgba(200,131,74,0)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,isSelected?22:14,0,Math.PI*2); ctx.fill();
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 3);
+    grad.addColorStop(0, `rgba(200,131,74,${isSelected ? 0.5 : 0.25})`);
+    grad.addColorStop(1, 'rgba(200,131,74,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, r * 3, 0, Math.PI * 2); ctx.fill();
 
     // Dot
-    ctx.fillStyle=isSelected?'#e8a060':'#c8834a';
-    ctx.beginPath(); ctx.arc(cx,cy,isSelected?7:5,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(240,232,216,0.7)'; ctx.lineWidth=1.5;
-    ctx.stroke();
+    ctx.fillStyle = isSelected ? '#e8a060' : '#c8834a';
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(240,232,216,0.8)'; ctx.lineWidth = 1.5; ctx.stroke();
 
     // Label
-    ctx.fillStyle='rgba(200,131,74,0.9)'; ctx.font='9px sans-serif'; ctx.textAlign='left';
-    ctx.fillText(region, cx+9, cy+3);
+    ctx.fillStyle = 'rgba(232,200,122,0.95)';
+    ctx.font = `${isSelected ? 11 : 10}px sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(region, cx + r + 3, cy + 4);
   });
 
-  // Click handler
-  canvas.onclick = function(e) {
-    const rect = canvas.getBoundingClientRect();
-    const mx = (e.clientX-rect.left)*(W/rect.width);
-    const my = (e.clientY-rect.top)*(H/rect.height);
+  // Re-attach click handler
+  const canvas2 = document.getElementById('world-canvas');
+  canvas2.onclick = function(e) {
+    const rect = canvas2.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
     let hit = null;
-    Object.entries(regionMap).forEach(([region,{coords}]) => {
-      const [cx,cy]=[coords[0]*scale[0],coords[1]*scale[1]];
-      const d=Math.hypot(mx-cx,my-cy);
-      if(d<18) hit=region;
+    Object.entries(regionMap).forEach(([region, {coords}]) => {
+      const [lon, lat] = coords;
+      const [cx, cy] = project(lon, lat, W, H);
+      if (Math.hypot(mx - cx, my - cy) < 18) hit = region;
     });
+
     if (hit) {
       if (selectedRegion === hit) { clearRegion(); return; }
       selectedRegion = hit;
-      const rFlavors = [...regionMap[hit].flavors];
+      const rFlavors = [...(regionMap[hit]?.flavors || [])];
       document.getElementById('region-label').textContent = hit + ' 的風味';
-      document.getElementById('clear-region').style.display='inline';
+      document.getElementById('clear-region').style.display = 'inline';
       document.getElementById('region-flavors').innerHTML = rFlavors.length
-        ? rFlavors.map(f=>`<span class="ftag">${escHTML(f)}</span>`).join('')
+        ? rFlavors.map(f => `<span class="ftag">${escHTML(f)}</span>`).join('')
         : `<span style="font-size:11px;color:var(--text3)">此產區尚無風味記錄</span>`;
       const box = document.getElementById('region-box');
-      box.style.borderColor='rgba(200,131,74,0.35)';
-      box.style.background='rgba(200,131,74,0.06)';
-      document.querySelector('#region-title span:first-of-type').style.color='var(--accent2)';
-      drawMap();
+      box.style.borderColor = 'rgba(200,131,74,0.35)';
+      box.style.background = 'rgba(200,131,74,0.06)';
+      document.querySelector('#region-title span:first-of-type').style.color = 'var(--accent2)';
+      renderMap(ctx, W, H);
     }
   };
 }
