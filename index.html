@@ -523,24 +523,21 @@ async function runAI(file) {
 
   try {
     const base64 = formState.imageUrl.split(',')[1];
-    const mediaType = file.type || 'image/jpeg';
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const GEMINI_KEY = 'AQ.Ab8RN6KaWlxFLaBMtJnszVdvnybMZu2bLBkP9RnAaRjWStU5LQ';
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 800,
-        messages: [{
-          role: 'user',
-          content: [
-            {type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
-            {type:'text', text:'你是專業咖啡師。從這張咖啡包裝照片辨識資訊，只回傳JSON：{"name":"","origin":"","farm":"","roast":"淺焙或中焙或深焙","process":"水洗或日曬或蜜處理或厭氧或其他","flavors":[],"note":""}。無法辨識的欄位留空字串。'}
+        contents: [{
+          parts: [
+            {inline_data: {mime_type: file.type || 'image/jpeg', data: base64}},
+            {text: '你是專業咖啡師。從這張咖啡包裝照片辨識資訊，只回傳JSON不要加任何說明或markdown：{"name":"","origin":"","farm":"","roast":"淺焙或中焙或深焙","process":"水洗或日曬或蜜處理或厭氧或其他","flavors":[],"note":""}。無法辨識的欄位留空字串。'}
           ]
         }]
       })
     });
     const data = await res.json();
-    const text = (data.content||[]).map(c=>c.text||'').join('');
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
     const result = JSON.parse(text.replace(/```json|```/g,'').trim());
 
     if (!formState.name && result.name) { formState.name = result.name; }
@@ -817,16 +814,16 @@ async function runInsight() {
 
   try {
     const summary = beans.map(b=>({name:b.name,origin:b.origin,roast:b.roast,process:b.process,flavors:b.flavors,rating:b.rating,grind:b.grind}));
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const GEMINI_KEY = 'AQ.Ab8RN6KaWlxFLaBMtJnszVdvnybMZu2bLBkP9RnAaRjWStU5LQ';
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-6', max_tokens:800,
-        messages:[{role:'user',content:`你是精品咖啡顧問。根據以下收藏用繁體中文分析（150字內，像朋友聊天，不要條列）：\n${JSON.stringify(summary)}\n分析偏好的產區、處理法風味傾向、焙度習慣，並推薦下一支豆子類型。`}]
+        contents:[{parts:[{text:`你是精品咖啡顧問。根據以下收藏用繁體中文分析（150字內，像朋友聊天，不要條列）：\n${JSON.stringify(summary)}\n分析偏好的產區、處理法風味傾向、焙度習慣，並推薦下一支豆子類型。`}]}]
       })
     });
     const data = await res.json();
-    aiInsightText = (data.content||[]).map(c=>c.text||'').join('');
+    aiInsightText = data.candidates?.[0]?.content?.parts?.[0]?.text || '分析失敗，請稍後再試。';
     el.textContent = aiInsightText;
   } catch {
     el.textContent = '分析失敗，請確認 API Key 設定後再試。';
