@@ -540,29 +540,23 @@ async function runAI(file) {
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
     const result = JSON.parse(text.replace(/```json|```/g,'').trim());
 
-    if (!formState.name && result.name) { formState.name = result.name; }
-    if (!formState.origin && result.origin) { formState.origin = result.origin; }
-    if (!formState.farm && result.farm) { formState.farm = result.farm; }
+    // Fill formState with AI results
+    if (result.name) formState.name = result.name;
+    if (result.origin) formState.origin = result.origin;
+    if (result.farm) formState.farm = result.farm;
     if (ROAST_OPTS.includes(result.roast)) formState.roast = result.roast;
     if (PROCESS_OPTS.includes(result.process)) formState.process = result.process;
-    if (!formState.flavors && result.flavors?.length) formState.flavors = result.flavors.join('、');
+    if (result.flavors && result.flavors.length) formState.flavors = result.flavors.join('、');
 
-    const conf = result.note ? `（${result.note}）` : '';
-    if (statusEl) statusEl.innerHTML = `<div class="ai-result"><div class="ai-result-title">✦ AI 辨識完成 ${conf}</div><div class="ai-result-text">欄位已自動帶入，請確認後儲存</div></div>`;
-
-    // Update form inputs
-    const inputs = {name:'f-name', origin:'f-origin', farm:'f-farm', flavors:'f-flavors'};
-    Object.entries(inputs).forEach(([k,id]) => {
-      const el = document.getElementById(id);
-      if (el && formState[k]) el.value = formState[k];
-    });
-    // Update seg buttons
-    document.querySelectorAll('#modal-container .seg-ctrl').forEach(ctrl => {
-      ctrl.querySelectorAll('.seg-btn').forEach(btn => {
-        if (btn.textContent === formState.roast || btn.textContent === formState.process) {
-          btn.classList.add('active');
-        }
-      });
+    // Re-render modal so all fields and seg buttons reflect AI data
+    const scrollTop = document.querySelector('.modal-sheet') ? document.querySelector('.modal-sheet').scrollTop : 0;
+    renderFormModal();
+    requestAnimationFrame(function() {
+      const sheet = document.querySelector('.modal-sheet');
+      if (sheet) sheet.scrollTop = scrollTop;
+      const newStatus = document.getElementById('ai-status');
+      const conf = result.note ? '（' + result.note + '）' : '';
+      if (newStatus) newStatus.innerHTML = '<div class="ai-result"><div class="ai-result-title">✦ AI 辨識完成 ' + conf + '</div><div class="ai-result-text">欄位已自動帶入，請確認後儲存</div></div>';
     });
   } catch(err) {
     if (statusEl) statusEl.innerHTML = `<div class="ai-result" style="border-color:rgba(200,80,80,.25);background:rgba(200,80,80,.08)"><div class="ai-result-title" style="color:#c85050">AI 辨識失敗</div><div class="ai-result-text">請手動填寫各欄位</div></div>`;
